@@ -1,122 +1,110 @@
-<!DOCTYPE html> 
-<html lang="en"> 
-<head> 
-  <meta charset="UTF-8"> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-  <title>A-Frame Game with 3D Models</title> 
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script> 
-</head> 
-<body> 
-  <a-scene> 
-    <!-- Небо и пол --> 
-    <a-sky color="#87CEEB"></a-sky> 
-    <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane> 
- 
-    <!-- Камера с WASD и управлением мышью --> 
-    <a-entity  
-      id="player"  
-      position="0 1.6 5"  
-      camera  
-      wasd-controls  
-      look-controls  
-      collision-check> 
-    </a-entity> 
- 
-    <!-- 3D модели для сбора --> 
-    <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity> 
-    <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity> 
-    <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity> 
-    <a-entity id="item4" position="3 1 -6" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity> 
-    <a-entity id="item5" position="-3 1 -7" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity> 
- 
-    <!-- Счет и таймер --> 
-    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text> 
-    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text> 
-  </a-scene> 
- 
-  <script> 
-    // Начальные значения 
-    let score = 0; 
-    let time = 60; 
-    let totalCollectibles = 5; // Общее количество объектов 
-    let timer; // Переменная для таймера 
-
-    // 1. Создание компонента для сбора объектов 
-    AFRAME.registerComponent('collectible', { 
-      init: function () { 
-        this.el.classList.add('collectible'); // Добавляем класс для объекта 
-        this.collected = false; // Флаг, чтобы объект не обрабатывался повторно 
-      } 
-    }); 
- 
-    // 2. Добавление логики проверки столкновений 
-    AFRAME.registerComponent('collision-check', { 
-      tick: function () { 
-        const player = this.el; 
-        const collectibles = document.querySelectorAll('.collectible'); 
- 
-        collectibles.forEach((item) => { 
-          const playerPos = player.object3D.position; 
-          const itemPos = item.object3D.position; 
-
-          // Проверка расстояния между игроком и объектом 
-          const distance = playerPos.distanceTo(itemPos); 
-          if (distance < 1 && !item.collected) { // Если расстояние меньше 1 и объект еще не собран 
-            item.setAttribute('visible', false); // Объект исчезает 
-            item.collected = true; // Помечаем объект как собранный 
-            score++; 
-            document.getElementById('score').setAttribute('value', Score: ${score}); 
-
-            // Проверка, все ли объекты собраны 
-            if (score === totalCollectibles) { 
-              endGame('Victory! You collected all items!'); 
-            } 
-          } 
-        }); 
-      } 
-    }); 
- 
-    // 3. Создание таймера 
-    function startTimer() {
-      clearInterval(timer); // Остановить предыдущий таймер
-      time = 60; // Сбросить время
-      document.getElementById('timer').setAttribute('value', Time: ${time});
-
-      timer = setInterval(() => { 
-        if (time > 0) { 
-          time--; 
-          document.getElementById('timer').setAttribute('value', Time: ${time}); 
-        } else { 
-          clearInterval(timer); 
-          endGame('Game Over! Time is up.'); 
-        } 
-      }, 1000); 
-    }
-
-    // 4. Завершение игры
-    function endGame(message) { alert(${message}\nFinal Score: ${score}); // Показываем сообщение об окончании игры
-      resetGame(); // Сбрасываем игру автоматически
-    } 
-
-    // Функция для сброса игры
-    function resetGame() {
-      score = 0; // Сбросить счет
-      document.getElementById('score').setAttribute('value', Score: ${score});
-      
-      const collectibles = document.querySelectorAll('.collectible');
-      collectibles.forEach(item => {
-        item.setAttribute('visible', true); // Сделать все объекты видимыми
-        item.collected = false; // Сбросить состояние "собрано"
-      });
-
-      startTimer(); // Запустить таймер заново
-    }
-
-    // Начать игру при загрузке страницы
-    window.onload = function() {
-      startTimer();
-    };
-    
-  </script> 
-</body> 
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+  <meta charset="UTF-8">  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <title>A-Frame Game with 3D Models</title>  
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>  
+</head>  
+<body>  
+  <a-scene>  
+    <!-- Небо и пол -->  
+    <a-sky color="#87CEEB"></a-sky>  
+    <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>  
+  
+    <!-- Камера с WASD и управлением мышью -->  
+    <a-entity   
+      id="player"   
+      position="0 1.6 5"   
+      camera   
+      wasd-controls   
+      look-controls   
+      collision-check>  
+    </a-entity>  
+  
+    <!-- 3D модели для сбора -->  
+    <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item4" position="3 1 -6" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item5" position="-3 1 -7" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+  
+    <!-- Счет и таймер -->  
+    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>  
+    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>  
+  </a-scene>  
+  
+  <script>  
+    // Начальные значения  
+    let score = 0;  
+    let time = 60;  
+    let totalCollectibles = 5; // Общее количество объектов  
+  
+    // 1. Создание компонента для сбора объектов  
+    AFRAME.registerComponent('collectible', {  
+      init: function () {  
+        this.el.classList.add('collectible'); // Добавляем класс для объекта  
+        this.collected = false; // Флаг, чтобы объект не обрабатывался повторно  
+      }  
+    });  
+  
+    // 2. Добавление логики проверки столкновений  
+    AFRAME.registerComponent('collision-check', {  
+      tick: function () {  
+        const player = this.el;  
+        const collectibles = document.querySelectorAll('.collectible');  
+  
+        collectibles.forEach((item) => {  
+          const playerPos = player.object3D.position;  
+          const itemPos = item.object3D.position;  
+  
+          // Проверка расстояния между игроком и объектом  
+          const distance = playerPos.distanceTo(itemPos);  
+          if (distance < 1 && !item.collected) { // Если расстояние меньше 1 и объект еще не собран  
+            item.setAttribute('visible', false); // Объект исчезает  
+            item.collected = true; // Помечаем объект как собранный  
+            score++;  
+            document.getElementById('score').setAttribute('value', `Score: ${score}`);  
+  
+            // Проверка, все ли объекты собраны  
+            if (score === totalCollectibles) {  
+              restartGame();  
+            }  
+          }  
+        });  
+      }  
+    });  
+  
+    // 3. Создание таймера  
+    let timer = setInterval(() => {  
+      if (time > 0) {  
+        time--;  
+        document.getElementById('timer').setAttribute('value', `Time: ${time}`);  
+      } else {  
+        clearInterval(timer);  
+        restartGame();  
+      }  
+    }, 1000);  
+  
+    // 4. Перезапуск игры  
+    function restartGame() {  
+      // Сброс данных
+      score = 0;  
+      time = 60;  
+      document.getElementById('score').setAttribute('value', 'Score: 0');  
+      document.getElementById('timer').setAttribute('value', 'Time: 60');  
+  
+      // Возвращение объектов  
+      const collectibles = document.querySelectorAll('.collectible');  
+      collectibles.forEach((item) => {  
+        item.setAttribute('visible', true);  
+        item.collected = false;  
+      });  
+  
+      // Возвращение игрока в начальную позицию  
+      const player = document.getElementById('player');  
+      player.setAttribute('position', '0 1.6 5');  
+    }  
+  </script>  
+</body>  
 </html>
