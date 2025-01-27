@@ -11,6 +11,12 @@
     <!-- Небо и пол -->  
     <a-sky color="#87CEEB"></a-sky>  
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>  
+
+    <!-- Загрузка модели через a-assets -->  
+    <a-assets>  
+      <!-- Модель деревьев -->  
+      <a-asset-item id="tree-obj" src="path/to/your/model.gltf"></a-asset-item>  
+    </a-assets>  
   
     <!-- Камера с WASD и управлением мышью -->  
     <a-entity   
@@ -28,6 +34,9 @@
     <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
     <a-entity id="item4" position="3 1 -6" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
     <a-entity id="item5" position="-3 1 -7" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+  
+    <!-- Добавление вашей модели -->  
+    <a-entity gltf-model="#tree-obj" position="0 1.6 -3" scale="1 1 1"></a-entity>  
   
     <!-- Счет и таймер -->  
     <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>  
@@ -88,14 +97,14 @@
   
     // 4. Перезапуск игры  
     function restartGame() {  
-      // Сброс данных
+      // Сброс данных  
       score = 0;  
       time = 60;  
       document.getElementById('score').setAttribute('value', 'Score: 0');  
       document.getElementById('timer').setAttribute('value', 'Time: 60');  
   
       // Возвращение объектов  
-      const collectibles = document.querySelectorAll('.collectible');  
+      const collectibles = document.querySelectorAll('.collectible');
       collectibles.forEach((item) => {  
         item.setAttribute('visible', true);  
         item.collected = false;  
