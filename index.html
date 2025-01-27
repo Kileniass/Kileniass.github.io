@@ -3,64 +3,75 @@
 <head>  
   <meta charset="UTF-8">  
   <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <title>A-Frame Game with VR Controllers</title>  
+  <title>A-Frame Game with 3D Models</title>  
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>  
 </head>  
 <body>  
-  <a-scene vr-mode-ui="enabled: true" embedded>  
+  <a-scene>  
     <!-- Небо и пол -->  
     <a-sky color="#87CEEB"></a-sky>  
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>  
 
     <!-- Загрузка модели через a-assets -->  
     <a-assets>  
+      <!-- Модель деревьев -->  
       <a-asset-item id="tree-obj" src="path/to/your/model.gltf"></a-asset-item>  
     </a-assets>  
-
-    <!-- Камера с прицелом -->  
-    <a-entity id="player" position="0 1.6 5">  
-      <a-entity camera look-controls>  
-        <!-- Точка прицела в центре экрана -->  
-        <a-entity position="0 0 -1" geometry="primitive: circle; radius: 0.01" material="color: #FF0000;"></a-entity>  
-        <a-entity cursor="rayOrigin: mouse" raycaster="objects: .collectible"></a-entity>  
-      </a-entity>  
+  
+    <!-- Камера с WASD и управлением мышью -->  
+    <a-entity   
+      id="player"   
+      position="0 1.6 5"   
+      camera   
+      wasd-controls   
+      look-controls   
+      collision-check>  
     </a-entity>  
-
-    <!-- Контроллеры VR -->  
-    <a-entity hand-controls="hand: left; handModelStyle: lowPoly; color: #FF0000"></a-entity>  
-    <a-entity hand-controls="hand: right; handModelStyle: lowPoly; color: #0000FF"  
-              raycaster="objects: .collectible"  
-              line="color: #00FF00; opacity: 0.5">  
-    </a-entity>  
-
+  
     <!-- 3D модели для сбора -->  
-    <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>  
-    <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>  
-    <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>  
-    <a-entity id="item4" position="3 1 -6" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>  
-    <a-entity id="item5" position="-3 1 -7" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>  
-
-    <!-- Отображение вашей модели -->  
+    <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item4" position="3 1 -6" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+    <a-entity id="item5" position="-3 1 -7" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" collectible></a-entity>  
+  
+    <!-- Добавление вашей модели -->  
     <a-entity gltf-model="#tree-obj" position="0 1.6 -3" scale="1 1 1"></a-entity>  
-
+  
     <!-- Счет и таймер -->  
     <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>  
     <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>  
   </a-scene>  
-
+  
   <script>  
     // Начальные значения  
     let score = 0;  
     let time = 60;  
     let totalCollectibles = 5; // Общее количество объектов  
-
-    // Сбор объекта при наведении и нажатии  
+  
+    // 1. Создание компонента для сбора объектов  
     AFRAME.registerComponent('collectible', {  
       init: function () {  
-        this.el.addEventListener('click', () => {  
-          if (!this.el.collected) {  
-            this.el.setAttribute('visible', false);  
-            this.el.collected = true;  
+        this.el.classList.add('collectible'); // Добавляем класс для объекта  
+        this.collected = false; // Флаг, чтобы объект не обрабатывался повторно  
+      }  
+    });  
+  
+    // 2. Добавление логики проверки столкновений  
+    AFRAME.registerComponent('collision-check', {  
+      tick: function () {  
+        const player = this.el;  
+        const collectibles = document.querySelectorAll('.collectible');  
+  
+        collectibles.forEach((item) => {  
+          const playerPos = player.object3D.position;  
+          const itemPos = item.object3D.position;  
+  
+          // Проверка расстояния между игроком и объектом  
+          const distance = playerPos.distanceTo(itemPos);  
+          if (distance < 1 && !item.collected) { // Если расстояние меньше 1 и объект еще не собран  
+            item.setAttribute('visible', false); // Объект исчезает  
+            item.collected = true; // Помечаем объект как собранный  
             score++;  
             document.getElementById('score').setAttribute('value', `Score: ${score}`);  
   
@@ -72,8 +83,8 @@
         });  
       }  
     });  
-
-    // Таймер  
+  
+    // 3. Создание таймера  
     let timer = setInterval(() => {  
       if (time > 0) {  
         time--;  
@@ -83,21 +94,25 @@
         restartGame();  
       }  
     }, 1000);  
-
-    // Перезапуск игры  
+  
+    // 4. Перезапуск игры  
     function restartGame() {  
       // Сброс данных  
       score = 0;  
       time = 60;  
       document.getElementById('score').setAttribute('value', 'Score: 0');  
       document.getElementById('timer').setAttribute('value', 'Time: 60');  
-
+  
       // Возвращение объектов  
-      const collectibles = document.querySelectorAll('.collectible');  
+      const collectibles = document.querySelectorAll('.collectible');
       collectibles.forEach((item) => {  
         item.setAttribute('visible', true);  
         item.collected = false;  
       });  
+  
+      // Возвращение игрока в начальную позицию  
+      const player = document.getElementById('player');  
+      player.setAttribute('position', '0 1.6 5');  
     }  
   </script>  
 </body>  
