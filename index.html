@@ -13,10 +13,8 @@
     xr-mode-ui="enabled: true"
     background="color: #87CEEB"
   >
-
     <!-- Пол -->
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
-
     <!-- Игрок и камера -->
     <a-entity id="player" position="0 1.6 5" movement-controls="speed: 0.1" wasd-controls>
       <a-entity camera look-controls>
@@ -26,7 +24,6 @@
                  raycaster="objects: .collectible"></a-entity>
       </a-entity>
     </a-entity>
-
     <!-- VR-контроллеры для Pico 4 -->
     <a-entity id="left-controller"
              laser-controls="hand: left"
@@ -36,20 +33,14 @@
              laser-controls="hand: right"
              vr-movement="hand: right"
              line="color: #00FF00; opacity: 0.5"></a-entity>
-
-      <!-- 3D объекты для сбора -->
+    <!-- 3D объекты для сбора -->
     <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
     <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
     <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
-
-    <!-- Добавление вашей модели -->
-    <a-entity gltf-model="#tree-obj" position="0 1.6 -3" scale="1 1 1"></a-entity>
-
     <!-- UI элементы -->
     <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000" scale="2 2 2"></a-text>
     <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000" scale="2 2 2"></a-text>
   </a-scene>
-
   <script>
     // Инициализация игры
     let score = 0;
@@ -62,6 +53,7 @@
       init: function () {
         this.move = this.move.bind(this);
         this.el.addEventListener('triggerdown', this.move);
+        this.el.addEventListener('axismove', (event) => this.handleAxisMove(event));
       },
       move: function () {
         const player = document.getElementById('player');
@@ -69,11 +61,35 @@
         this.el.object3D.getWorldDirection(direction);
         direction.y = 0;
         direction.normalize();
-        
+
         const speed = 0.3;
         const position = player.getAttribute('position');
         position.x += direction.x * speed;
         position.z += direction.z * speed;
+        player.setAttribute('position', position);
+      },
+      handleAxisMove: function (event) {
+        const player = document.getElementById('player');
+        const axis = event.detail.axis;
+        if (!axis) return;
+
+        const speed = 0.1;
+        const position = player.getAttribute('position');
+
+        // Движение вперед/назад по оси Y джойстика
+        if (Math.abs(axis[1]) > 0.1) {
+          const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(player.object3D.quaternion);
+          position.x += forward.x * axis[1] * speed;
+          position.z += forward.z * axis[1] * speed;
+        }
+
+        // Поворот влево/вправо по оси X джойстика
+        if (Math.abs(axis[0]) > 0.1) {
+          const rotation = player.getAttribute('rotation');
+          rotation.y += axis[0] * 2; // Скорость поворота
+          player.setAttribute('rotation', rotation);
+        }
+
         player.setAttribute('position', position);
       }
     });
@@ -85,15 +101,15 @@
         this.collected = false;
         this.el.addEventListener('click', () => this.collect());
       },
-      collect: function() {
-        if(this.collected) return;
-        
+      collect: function () {
+        if (this.collected) return;
+
         this.el.setAttribute('visible', false);
         this.collected = true;
         score++;
         document.getElementById('score').setAttribute('value', `Score: ${score}`);
-        
-        if(score === totalCollectibles) restartGame();
+
+        if (score === totalCollectibles) restartGame();
       }
     });
 
@@ -103,7 +119,7 @@
         const player = this.el;
         document.querySelectorAll('.collectible').forEach(item => {
           const distance = player.object3D.position.distanceTo(item.object3D.position);
-          if(distance < 1 && !item.collected) {
+          if (distance < 1 && !item.collected) {
             item.components.collectible.collect();
           }
         });
@@ -112,7 +128,7 @@
 
     // Таймер игры
     const timerInterval = setInterval(() => {
-      if(time <= 0) {
+      if (time <= 0) {
         clearInterval(timerInterval);
         restartGame();
         return;
@@ -125,12 +141,11 @@
     function restartGame() {
       score = 0;
       time = 60;
-      
+
       document.querySelectorAll('.collectible').forEach(item => {
         item.setAttribute('visible', true);
         item.collected = false;
       });
-
       document.getElementById('player').setAttribute('position', '0 1.6 5');
       document.getElementById('score').setAttribute('value', 'Score: 0');
       document.getElementById('timer').setAttribute('value', 'Time: 60');
