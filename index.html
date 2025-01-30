@@ -3,65 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A-Frame Game with 3D Models</title>
+  <title>A-Frame VR Game for Pico 4</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <!-- Добавляем компонент управления для VR -->
   <script src="https://unpkg.com/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
 </head>
 <body>
-  <a-scene>
-    <!-- Небо и пол -->
-    <a-sky color="#87CEEB"></a-sky>
+  <a-scene 
+    webxr="requiredFeatures: local-floor; referenceSpaceType: local-floor;"
+    xr-mode-ui="enabled: true"
+    background="color: #87CEEB"
+  >
+
+    <!-- Пол -->
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
 
-    <!-- Загрузка модели через a-assets -->
-    <a-assets>
-      <!-- Модель деревьев -->
-      <a-asset-item id="tree-obj" src="path/to/your/model.gltf"></a-asset-item>
-    </a-assets>
-
-    <!-- Камера с прицелом и управлением -->
+    <!-- Игрок и камера -->
     <a-entity id="player" position="0 1.6 5" movement-controls="speed: 0.1" wasd-controls>
       <a-entity camera look-controls>
-        <!-- Точка прицела -->
-        <a-entity position="0 0 -1" geometry="primitive: circle; radius: 0.01" material="color: #FF0000;"></a-entity>
-        <!-- Курсор -->
-        <a-entity cursor="fuse: true; fuseTimeout: 500" raycaster="objects: .collectible"></a-entity>
+        <a-entity position="0 0 -1" geometry="primitive: circle; radius: 0.01" 
+                 material="color: #FF0000"></a-entity>
+        <a-entity cursor="fuse: true; fuseTimeout: 500" 
+                 raycaster="objects: .collectible"></a-entity>
       </a-entity>
     </a-entity>
 
-    <!-- VR-контроллеры с поддержкой движения -->
-    <a-entity hand-controls="hand: left; handModelStyle: lowPoly; color: #FF0000"
-              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"
-              vr-movement="hand: left"></a-entity>
-    <a-entity hand-controls="hand: right; handModelStyle: lowPoly; color: #0000FF"
-              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"
-              vr-movement="hand: right"></a-entity>
+    <!-- VR-контроллеры для Pico 4 -->
+    <a-entity id="left-controller"
+             laser-controls="hand: left"
+             vr-movement="hand: left"
+             line="color: #00FF00; opacity: 0.5"></a-entity>
+    <a-entity id="right-controller"
+             laser-controls="hand: right"
+             vr-movement="hand: right"
+             line="color: #00FF00; opacity: 0.5"></a-entity>
 
-    <!-- 3D объекты для сбора -->
-    <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
-    <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
-    <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
+    <!-- 3D объекты для сбора (используйте абсолютные URL!) -->
+    <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" 
+             gltf-model="https://your-server.com/models/sorceress.glb" 
+             class="collectible"></a-entity>
+    <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" 
+             gltf-model="https://your-server.com/models/sorceress.glb" 
+             class="collectible"></a-entity>
+    <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" 
+             gltf-model="https://your-server.com/models/sorceress.glb" 
+             class="collectible"></a-entity>
 
-    <!-- Добавление вашей модели -->
-    <a-entity gltf-model="#tree-obj" position="0 1.6 -3" scale="1 1 1"></a-entity>
-
-    <!-- Счет и таймер -->
-    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>
-    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>
+    <!-- UI элементы -->
+    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000" scale="2 2 2"></a-text>
+    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000" scale="2 2 2"></a-text>
   </a-scene>
 
   <script>
-    // Начальные значения
+    // Инициализация игры
     let score = 0;
     let time = 60;
-    let totalCollectibles = 3; // Исправлено на фактическое количество объектов
+    const totalCollectibles = 3;
 
-    // Компонент для VR движения
+    // Компонент для движения через контроллеры
     AFRAME.registerComponent('vr-movement', {
-      schema: {
-        hand: {type: 'string', default: 'right'}
-      },
+      schema: { hand: { type: 'string' } },
       init: function () {
         this.move = this.move.bind(this);
         this.el.addEventListener('triggerdown', this.move);
@@ -72,6 +72,7 @@
         this.el.object3D.getWorldDirection(direction);
         direction.y = 0;
         direction.normalize();
+        
         const speed = 0.3;
         const position = player.getAttribute('position');
         position.x += direction.x * speed;
@@ -80,68 +81,65 @@
       }
     });
 
-    // 1. Создание компонента для сбора объектов
+    // Система сбора объектов
     AFRAME.registerComponent('collectible', {
       init: function () {
         this.el.classList.add('collectible');
         this.collected = false;
+        this.el.addEventListener('click', () => this.collect());
+      },
+      collect: function() {
+        if(this.collected) return;
+        
+        this.el.setAttribute('visible', false);
+        this.collected = true;
+        score++;
+        document.getElementById('score').setAttribute('value', `Score: ${score}`);
+        
+        if(score === totalCollectibles) restartGame();
       }
     });
 
-    // 2. Добавление логики проверки столкновений
+    // Система коллизий
     AFRAME.registerComponent('collision-check', {
       tick: function () {
         const player = this.el;
-        const collectibles = document.querySelectorAll('.collectible');
-
-        collectibles.forEach((item) => {
-          const playerPos = player.object3D.position;
-          const itemPos = item.object3D.position;
-
-          const distance = playerPos.distanceTo(itemPos);
-          if (distance < 1 && !item.collected) {
-            item.setAttribute('visible', false);
-            item.collected = true;
-            score++;
-            document.getElementById('score').setAttribute('value', `Score: ${score}`);
-
-            if (score === totalCollectibles) {
-              restartGame();
-            }
+        document.querySelectorAll('.collectible').forEach(item => {
+          const distance = player.object3D.position.distanceTo(item.object3D.position);
+          if(distance < 1 && !item.collected) {
+            item.components.collectible.collect();
           }
         });
       }
     });
 
-    // 3. Создание таймера
-    let timer = setInterval(() => {
-      if (time > 0) {
-        time--;
-        document.getElementById('timer').setAttribute('value', `Time: ${time}`);
-      } else {
-        clearInterval(timer);
+    // Таймер игры
+    const timerInterval = setInterval(() => {
+      if(time <= 0) {
+        clearInterval(timerInterval);
         restartGame();
+        return;
       }
+      time--;
+      document.getElementById('timer').setAttribute('value', `Time: ${time}`);
     }, 1000);
 
-    // 4. Перезапуск игры
+    // Перезапуск игры
     function restartGame() {
       score = 0;
       time = 60;
-      document.getElementById('score').setAttribute('value', 'Score: 0');
-      document.getElementById('timer').setAttribute('value', 'Time: 60');
-
-      const collectibles = document.querySelectorAll('.collectible');
-      collectibles.forEach((item) => {
+      
+      document.querySelectorAll('.collectible').forEach(item => {
         item.setAttribute('visible', true);
         item.collected = false;
       });
 
-      const player = document.getElementById('player');
-      player.setAttribute('position', '0 1.6 5');
+      document.getElementById('player').setAttribute('position', '0 1.6 5');
+      document.getElementById('score').setAttribute('value', 'Score: 0');
+      document.getElementById('timer').setAttribute('value', 'Time: 60');
     }
 
-    // Добавляем компонент проверки столкновений к игроку
+    // Инициализация компонентов
     document.getElementById('player').setAttribute('collision-check', '');
   </script>
 </body>
