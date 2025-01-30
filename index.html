@@ -1,25 +1,27 @@
-<!DOCTYPE html>  
-<html lang="en">  
-<head>  
-  <meta charset="UTF-8">  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <title>A-Frame Game with 3D Models</title>  
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>  
-</head>  
-<body>  
-  <a-scene>  
-    <!-- Небо и пол -->  
-    <a-sky color="#87CEEB"></a-sky>  
-    <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A-Frame Game with 3D Models</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <!-- Добавляем компонент управления для VR -->
+  <script src="https://unpkg.com/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
+</head>
+<body>
+  <a-scene>
+    <!-- Небо и пол -->
+    <a-sky color="#87CEEB"></a-sky>
+    <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
 
-    <!-- Загрузка модели через a-assets -->  
-    <a-assets>  
-      <!-- Модель деревьев -->  
-      <a-asset-item id="tree-obj" src="path/to/your/model.gltf"></a-asset-item>  
-    </a-assets>  
-  
-    <!-- Камера с прицелом -->
-    <a-entity id="player" position="0 1.6 5">
+    <!-- Загрузка модели через a-assets -->
+    <a-assets>
+      <!-- Модель деревьев -->
+      <a-asset-item id="tree-obj" src="path/to/your/model.gltf"></a-asset-item>
+    </a-assets>
+
+    <!-- Камера с прицелом и управлением -->
+    <a-entity id="player" position="0 1.6 5" movement-controls="speed: 0.1" wasd-controls>
       <a-entity camera look-controls>
         <!-- Точка прицела -->
         <a-entity position="0 0 -1" geometry="primitive: circle; radius: 0.01" material="color: #FF0000;"></a-entity>
@@ -28,96 +30,119 @@
       </a-entity>
     </a-entity>
 
-    <!-- VR-контроллеры -->
+    <!-- VR-контроллеры с поддержкой движения -->
     <a-entity hand-controls="hand: left; handModelStyle: lowPoly; color: #FF0000"
-              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"></a-entity>
+              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"
+              vr-movement="hand: left"></a-entity>
     <a-entity hand-controls="hand: right; handModelStyle: lowPoly; color: #0000FF"
-              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"></a-entity>
+              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"
+              vr-movement="hand: right"></a-entity>
 
     <!-- 3D объекты для сбора -->
     <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
     <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
     <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
-  
-    <!-- Добавление вашей модели -->  
-    <a-entity gltf-model="#tree-obj" position="0 1.6 -3" scale="1 1 1"></a-entity>  
-  
-    <!-- Счет и таймер -->  
-    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>  
-    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>  
-  </a-scene>  
-  
-  <script>  
-    // Начальные значения  
-    let score = 0;  
-    let time = 60;  
-    let totalCollectibles = 5; // Общее количество объектов  
-  
-    // 1. Создание компонента для сбора объектов  
-    AFRAME.registerComponent('collectible', {  
-      init: function () {  
-        this.el.classList.add('collectible'); // Добавляем класс для объекта  
-        this.collected = false; // Флаг, чтобы объект не обрабатывался повторно  
-      }  
-    });  
-  
-    // 2. Добавление логики проверки столкновений  
-    AFRAME.registerComponent('collision-check', {  
-      tick: function () {  
-        const player = this.el;  
-        const collectibles = document.querySelectorAll('.collectible');  
-  
-        collectibles.forEach((item) => {  
-          const playerPos = player.object3D.position;  
-          const itemPos = item.object3D.position;  
-  
-          // Проверка расстояния между игроком и объектом  
-          const distance = playerPos.distanceTo(itemPos);  
-          if (distance < 1 && !item.collected) { // Если расстояние меньше 1 и объект еще не собран  
-            item.setAttribute('visible', false); // Объект исчезает  
-            item.collected = true; // Помечаем объект как собранный  
-            score++;  
-            document.getElementById('score').setAttribute('value', `Score: ${score}`);  
-  
-            // Проверка, все ли объекты собраны  
-            if (score === totalCollectibles) {  
-              restartGame();  
-            }  
-          }  
-        });  
-      }  
-    });  
-  
-    // 3. Создание таймера  
-    let timer = setInterval(() => {  
-      if (time > 0) {  
-        time--;  
-        document.getElementById('timer').setAttribute('value', `Time: ${time}`);  
-      } else {  
-        clearInterval(timer);  
-        restartGame();  
-      }  
-    }, 1000);  
-  
-    // 4. Перезапуск игры  
-    function restartGame() {  
-      // Сброс данных  
-      score = 0;  
-      time = 60;  
-      document.getElementById('score').setAttribute('value', 'Score: 0');  
-      document.getElementById('timer').setAttribute('value', 'Time: 60');  
-  
-      // Возвращение объектов  
+
+    <!-- Добавление вашей модели -->
+    <a-entity gltf-model="#tree-obj" position="0 1.6 -3" scale="1 1 1"></a-entity>
+
+    <!-- Счет и таймер -->
+    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>
+    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>
+  </a-scene>
+
+  <script>
+    // Начальные значения
+    let score = 0;
+    let time = 60;
+    let totalCollectibles = 3; // Исправлено на фактическое количество объектов
+
+    // Компонент для VR движения
+    AFRAME.registerComponent('vr-movement', {
+      schema: {
+        hand: {type: 'string', default: 'right'}
+      },
+      init: function () {
+        this.move = this.move.bind(this);
+        this.el.addEventListener('triggerdown', this.move);
+      },
+      move: function () {
+        const player = document.getElementById('player');
+        const direction = new THREE.Vector3();
+        this.el.object3D.getWorldDirection(direction);
+        direction.y = 0;
+        direction.normalize();
+        const speed = 0.3;
+        const position = player.getAttribute('position');
+        position.x += direction.x * speed;
+        position.z += direction.z * speed;
+        player.setAttribute('position', position);
+      }
+    });
+
+    // 1. Создание компонента для сбора объектов
+    AFRAME.registerComponent('collectible', {
+      init: function () {
+        this.el.classList.add('collectible');
+        this.collected = false;
+      }
+    });
+
+    // 2. Добавление логики проверки столкновений
+    AFRAME.registerComponent('collision-check', {
+      tick: function () {
+        const player = this.el;
+        const collectibles = document.querySelectorAll('.collectible');
+
+        collectibles.forEach((item) => {
+          const playerPos = player.object3D.position;
+          const itemPos = item.object3D.position;
+
+          const distance = playerPos.distanceTo(itemPos);
+          if (distance < 1 && !item.collected) {
+            item.setAttribute('visible', false);
+            item.collected = true;
+            score++;
+            document.getElementById('score').setAttribute('value', `Score: ${score}`);
+
+            if (score === totalCollectibles) {
+              restartGame();
+            }
+          }
+        });
+      }
+    });
+
+    // 3. Создание таймера
+    let timer = setInterval(() => {
+      if (time > 0) {
+        time--;
+        document.getElementById('timer').setAttribute('value', `Time: ${time}`);
+      } else {
+        clearInterval(timer);
+        restartGame();
+      }
+    }, 1000);
+
+    // 4. Перезапуск игры
+    function restartGame() {
+      score = 0;
+      time = 60;
+      document.getElementById('score').setAttribute('value', 'Score: 0');
+      document.getElementById('timer').setAttribute('value', 'Time: 60');
+
       const collectibles = document.querySelectorAll('.collectible');
-      collectibles.forEach((item) => {  
-        item.setAttribute('visible', true);  
-        item.collected = false;  
-      });  
-  
-      // Возвращение игрока в начальную позицию  
-      const player = document.getElementById('player');  
-      player.setAttribute('position', '0 1.6 5');  
-    }  
-  </script>  
-</body>  
+      collectibles.forEach((item) => {
+        item.setAttribute('visible', true);
+        item.collected = false;
+      });
+
+      const player = document.getElementById('player');
+      player.setAttribute('position', '0 1.6 5');
+    }
+
+    // Добавляем компонент проверки столкновений к игроку
+    document.getElementById('player').setAttribute('collision-check', '');
+  </script>
+</body>
 </html>
