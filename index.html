@@ -1,148 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A-Frame Game with 3D Models</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <!-- Добавляем компонент управления для VR -->
-  <script src="https://unpkg.com/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
-</head>
-<body>
-  <a-scene>
-    <!-- Небо и пол -->
-    <a-sky color="#87CEEB"></a-sky>
-    <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Практическое задание A-Frame</title>
+    <!-- 1. Подключение физического движка -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    <!-- 8. Подключение ассета из библиотеки (пример: подключаем A-Frame Extras или иной ассет) -->
+    <script src="https://unpkg.com/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  </head>
+  <body>
+    <a-scene physics="debug: true">
+      <!-- 2. Анимация исчезновения (частицы) -->
+      <a-entity id="explosion" particle-system="preset: explosion; color: yellow" position="0 1 -4"></a-entity>
 
-    <!-- Загрузка модели через a-assets -->
-    <a-assets>
-      <!-- Модель деревьев -->
-      <a-asset-item id="tree-obj" src="path/to/your/model.gltf"></a-asset-item>
-    </a-assets>
+      <!-- 3. Интеграция звука при сборе -->
+      <a-sound id="collectSound" src="yoursound.wav" autoplay="false"></a-sound>
 
-    <!-- Камера с прицелом и управлением -->
-    <a-entity id="player" position="0 1.6 5" movement-controls="speed: 0.1" wasd-controls>
-      <a-entity camera look-controls>
-        <!-- Точка прицела -->
-        <a-entity position="0 0 -1" geometry="primitive: circle; radius: 0.01" material="color: #FF0000;"></a-entity>
-        <!-- Курсор -->
-        <a-entity cursor="fuse: true; fuseTimeout: 500" raycaster="objects: .collectible"></a-entity>
+      <!-- 4. Движущийся объект с анимацией -->
+      <a-entity id="movingObj" 
+                geometry="primitive: cone" 
+                material="color: red"  
+                position="0 2 -8"
+                animation="property: position; to: 5 2 -8; dur: 2000; loop: true">
       </a-entity>
-    </a-entity>
 
-    <!-- VR-контроллеры с поддержкой движения -->
-    <a-entity hand-controls="hand: left; handModelStyle: lowPoly; color: #FF0000"
-              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"
-              vr-movement="hand: left"></a-entity>
-    <a-entity hand-controls="hand: right; handModelStyle: lowPoly; color: #0000FF"
-              raycaster="objects: .collectible" line="color: #00FF00; opacity: 0.5"
-              vr-movement="hand: right"></a-entity>
+      <!-- 6. Объект с физикой -->
+      <a-entity geometry="primitive: box" 
+                material="color: blue"  
+                position="0 5 -10" 
+                dynamic-body>
+      </a-entity>
 
-    <!-- 3D объекты для сбора -->
-    <a-entity id="item1" position="0 1 -3" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
-    <a-entity id="item2" position="2 1 -5" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
-    <a-entity id="item3" position="-2 1 -4" scale="0.5 0.5 0.5" gltf-model="url(sorceress.glb)" class="collectible"></a-entity>
+      <!-- Пример использования ассета (например, 3D модель из библиотеки) -->
+      <a-assets>
+        <a-asset-item id="exampleModel" src="https://cdn.example.com/path/to/model.gltf"></a-asset-item>
+      </a-assets>
+      <a-entity gltf-model="#exampleModel" position="2 1 -5"></a-entity>
+      
+      <!-- Добавляем камеру для обзора сцены -->
+      <a-entity camera look-controls position="0 1.6 0"></a-entity>
+    </a-scene>
 
-    <!-- Добавление вашей модели -->
-    <a-entity gltf-model="#tree-obj" position="0 1.6 -3" scale="1 1 1"></a-entity>
-
-    <!-- Счет и таймер -->
-    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>
-    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>
-  </a-scene>
-
-  <script>
-    // Начальные значения
-    let score = 0;
-    let time = 60;
-    let totalCollectibles = 3; // Исправлено на фактическое количество объектов
-
-    // Компонент для VR движения
-    AFRAME.registerComponent('vr-movement', {
-      schema: {
-        hand: {type: 'string', default: 'right'}
-      },
-      init: function () {
-        this.move = this.move.bind(this);
-        this.el.addEventListener('triggerdown', this.move);
-      },
-      move: function () {
-        const player = document.getElementById('player');
-        const direction = new THREE.Vector3();
-        this.el.object3D.getWorldDirection(direction);
-        direction.y = 0;
-        direction.normalize();
-        const speed = 0.3;
-        const position = player.getAttribute('position');
-        position.x += direction.x * speed;
-        position.z += direction.z * speed;
-        player.setAttribute('position', position);
+    <!-- 5. Рандомизация позиций при перезапуске -->
+    <script>
+      function spawnObjects() {
+        const positions = [];
+        for (let i = 0; i < 5; i++) {
+          const x = Math.random() * 10 - 5;
+          const z = Math.random() * 10 - 5;
+          positions.push({ x: x, y: 1, z: z });
+        }
+        console.log("Random positions:", positions);
+        return positions;
       }
-    });
 
-    // 1. Создание компонента для сбора объектов
-    AFRAME.registerComponent('collectible', {
-      init: function () {
-        this.el.classList.add('collectible');
-        this.collected = false;
-      }
-    });
-
-    // 2. Добавление логики проверки столкновений
-    AFRAME.registerComponent('collision-check', {
-      tick: function () {
-        const player = this.el;
-        const collectibles = document.querySelectorAll('.collectible');
-
-        collectibles.forEach((item) => {
-          const playerPos = player.object3D.position;
-          const itemPos = item.object3D.position;
-
-          const distance = playerPos.distanceTo(itemPos);
-          if (distance < 1 && !item.collected) {
-            item.setAttribute('visible', false);
-            item.collected = true;
-            score++;
-            document.getElementById('score').setAttribute('value', `Score: ${score}`);
-
-            if (score === totalCollectibles) {
-              restartGame();
-            }
-          }
-        });
-      }
-    });
-
-    // 3. Создание таймера
-    let timer = setInterval(() => {
-      if (time > 0) {
-        time--;
-        document.getElementById('timer').setAttribute('value', `Time: ${time}`);
-      } else {
-        clearInterval(timer);
-        restartGame();
-      }
-    }, 1000);
-
-    // 4. Перезапуск игры
-    function restartGame() {
-      score = 0;
-      time = 60;
-      document.getElementById('score').setAttribute('value', 'Score: 0');
-      document.getElementById('timer').setAttribute('value', 'Time: 60');
-
-      const collectibles = document.querySelectorAll('.collectible');
-      collectibles.forEach((item) => {
-        item.setAttribute('visible', true);
-        item.collected = false;
+      // Пример вызова функции spawnObjects при загрузке страницы или перезапуске сцены.
+      document.addEventListener('DOMContentLoaded', function() {
+        spawnObjects();
       });
 
-      const player = document.getElementById('player');
-      player.setAttribute('position', '0 1.6 5');
-    }
+      // 7. Компонент гравитации
+      AFRAME.registerComponent('gravity', {
+        tick: function () {
+          if (this.el.body) { // Убедимся, что физическое тело создано
+            this.el.body.applyForce(0, -9.8, 0);
+          }
+        }
+      });
 
-    // Добавляем компонент проверки столкновений к игроку
-    document.getElementById('player').setAttribute('collision-check', '');
-  </script>
-</body>
+      // Пример запуска звука при событии (например, по клику)
+      document.addEventListener('click', function() {
+        const soundEl = document.querySelector('#collectSound');
+        if (soundEl && soundEl.components && soundEl.components.sound) {
+          soundEl.components.sound.playSound();
+        }
+      });
+    </script>
+  </body>
 </html>
