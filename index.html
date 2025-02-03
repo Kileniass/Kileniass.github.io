@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>A-Frame Game</title>
-  
+
   <!-- Подключение A-Frame -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <!-- Подключение физического движка -->
@@ -12,62 +12,166 @@
 </head>
 <body>
   <a-scene physics="debug: true">
-    
+
     <!-- Небо и пол -->
     <a-sky color="#87CEEB"></a-sky>
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22" static-body></a-plane>
 
-    <!-- Камера с исправленным движением -->
-    <a-entity id="player" position="0 1.6 5" player-movement>
-      <a-entity camera look-controls></a-entity>
+    <!-- Эффект взрыва при сборе -->
+    <a-entity id="explosion" particle-system="preset: explosion; color: yellow" position="0 -10 0"></a-entity>
+
+    <!-- Звук при сборе -->
+    <a-sound id="collectSound" src="yoursound.wav" autoplay="false"></a-sound>
+
+    <!-- Камера с исправленным управлением -->
+    <a-entity id="player" position="0 1.6 5" custom-movement>
+      <a-entity camera look-controls>
+        <a-entity cursor="fuse: true; fuseTimeout: 500" raycaster="objects: .collectible"></a-entity>
+      </a-entity>
     </a-entity>
 
+    <!-- Двигающийся объект -->
+    <a-entity id="movingObj" geometry="primitive: cone" material="color: red"
+              position="0 2 -8"
+              animation="property: position; to: 5 2 -8; dur: 2000; loop: true">
+    </a-entity>
+
+    <!-- Коллекционные объекты -->
+    <a-entity id="item1" class="collectible" geometry="primitive: box" material="color: blue"></a-entity>
+    <a-entity id="item2" class="collectible" geometry="primitive: sphere" material="color: green"></a-entity>
+    <a-entity id="item3" class="collectible" geometry="primitive: cylinder" material="color: yellow"></a-entity>
+
+    <!-- Очки и таймер -->
+    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>
+    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>
   </a-scene>
 
   <script>
-    AFRAME.registerComponent('player-movement', {
-      schema: { speed: { type: 'number', default: 0.1 } },
-
+    // Движение с учетом поворота камеры
+    AFRAME.registerComponent('custom-movement', {
       init: function () {
-        this.direction = new THREE.Vector3();
-        this.rotation = new THREE.Euler();
         this.velocity = new THREE.Vector3();
+        this.speed = 0.1;
+        this.keys = {};
 
-        window.addEventListener('keydown', (event) => this.onKeyDown(event));
-        window.addEventListener('keyup', (event) => this.onKeyUp(event));
-
-        this.keys = { w: false, a: false, s: false, d: false };
-      },
-
-      onKeyDown: function (event) {
-        const key = event.key.toLowerCase();
-        if (this.keys.hasOwnProperty(key)) this.keys[key] = true;
-      },
-
-      onKeyUp: function (event) {
-        const key = event.key.toLowerCase();
-        if (this.keys.hasOwnProperty(key)) this.keys[key] = false;
+        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
       },
 
       tick: function () {
-        const camera = this.el.children[0].object3D;
-        camera.getWorldDirection(this.direction);
-        this.direction.y = 0; // Игнорируем наклон вверх-вниз
-        this.direction.normalize();
+        const camera = this.el.querySelector('[camera]');
+        const direction = new THREE.Vector3();
+        camera.object3D.getWorldDirection(direction);
+        direction.y = 0; // Убираем наклон вверх/вниз
 
         this.velocity.set(0, 0, 0);
 
-        if (this.keys.w) this.velocity.add(this.direction.clone().multiplyScalar(this.data.speed));
-        if (this.keys.s) this.velocity.add(this.direction.clone().multiplyScalar(-this.data.speed));
+        if (this.keys['KeyW']) this.velocity.add(direction.clone().multiplyScalar(this.speed));
+        if (this.keys['KeyS']) this.velocity.add(direction.clone().multiplyScalar(-this.speed));
 
-        const leftDirection = new THREE.Vector3(-this.direction.z, 0, this.direction.x);
-        if (this.keys.a) this.velocity.add(leftDirection.clone().multiplyScalar(this.data.speed));
-        if (this.keys.d) this.velocity.add(leftDirection.clone().multiplyScalar(-this.data.speed));
+        const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+        if (this.keys['KeyA']) this.velocity.add(right.clone().multiplyScalar(-this.speed));
+        if (this.keys['KeyD']) this.velocity.add(right.clone().multiplyScalar(this.speed));
 
-        const position = this.el.object3D.position;
-        position.add(this.velocity);
+        this.el.object3D.position.add(this.velocity);
       }
     });
+
+    // Функция для спавна объектов в случайных местах
+    function spawnObjects() {
+      const positions = [];
+      for (let i = 0; i < 3; i++) {
+        const x = Math.random() * 10 - 5;
+        const z = Math.random() * 10 - 5;
+        positions.push({ x, y: 1, z });
+      }
+
+      document.getElementById('item1').setAttribute('position', `${positions[0].x} 1 ${positions[0].z}`);
+      document.getElementById('item2').setAttribute('position', `${positions[1].x} 1 ${positions[1].z}`);
+      document.getElementById('item3').setAttribute('position', `${positions[2].x} 1 ${positions[2].z}`);
+    }
+
+    // Компонент для сбора объектов
+    AFRAME.registerComponent('collectible', {
+      init: function () {
+        this.el.classList.add('collectible');
+        this.collected = false;
+      }
+    });
+
+    // Проверка столкновений
+    AFRAME.registerComponent('collision-check', {
+      tick: function () {
+        const player = this.el;
+        const collectibles = document.querySelectorAll('.collectible');
+
+        collectibles.forEach((item) => {
+          const playerPos = player.object3D.position;
+          const itemPos = item.object3D.position;
+
+          const distance = playerPos.distanceTo(itemPos);
+          if (distance < 1 && !item.collected) {
+            item.setAttribute('visible', false);
+            item.collected = true;
+            
+            // Эффект частиц
+            document.getElementById('explosion').setAttribute('position', `${itemPos.x} ${itemPos.y} ${itemPos.z}`);
+            
+            // Звук сбора
+            document.getElementById('collectSound').components.sound.playSound();
+
+            score++;
+            document.getElementById('score').setAttribute('value', `Score: ${score}`);
+
+            if (score === totalCollectibles) {
+              restartGame();
+            }
+          }
+        });
+      }
+    });
+
+    // Переменные для очков и таймера
+    let score = 0;
+    let time = 60;
+    let totalCollectibles = 3;
+
+    // Таймер
+    let timer = setInterval(() => {
+      if (time > 0) {
+        time--;
+        document.getElementById('timer').setAttribute('value', `Time: ${time}`);
+      } else {
+        clearInterval(timer);
+        restartGame();
+      }
+    }, 1000);
+
+    // Перезапуск игры
+    function restartGame() {
+      score = 0;
+      time = 60;
+      document.getElementById('score').setAttribute('value', 'Score: 0');
+      document.getElementById('timer').setAttribute('value', 'Time: 60');
+
+      const collectibles = document.querySelectorAll('.collectible');
+      collectibles.forEach((item) => {
+        item.setAttribute('visible', true);
+        item.collected = false;
+      });
+
+      // Перемещаем игрока в начальное положение
+      document.getElementById('player').setAttribute('position', '0 1.6 5');
+
+      // Генерируем новые позиции объектов
+      spawnObjects();
+    }
+
+    // Запускаем проверку столкновений для игрока
+    document.getElementById('player').setAttribute('collision-check', '');
+
+    // Генерируем начальные позиции объектов
+    spawnObjects();
   </script>
 </body>
 </html>
