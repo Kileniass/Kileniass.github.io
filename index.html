@@ -13,14 +13,14 @@
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
 
     <!-- Эффект взрыва -->
-    <a-entity id="explosionEffect" particle-system="preset: explosion; color: yellow; count: 50" visible="false"></a-entity>
+    <a-entity id="explosion" particle-system="preset: explosion; color: yellow" position="0 -10 0"></a-entity>
 
     <!-- Звук при сборе -->
     <a-sound id="collectSound" src="yoursound.wav" autoplay="false"></a-sound>
 
     <!-- Камера с управлением -->
     <a-entity id="player" position="0 1.6 5" movement-controls>
-      <a-entity camera look-controls id="cameraEntity">
+      <a-entity camera look-controls>
         <a-entity cursor="fuse: true; fuseTimeout: 500" raycaster="objects: .collectible"></a-entity>
       </a-entity>
       <!-- VR контроллеры -->
@@ -51,21 +51,23 @@
         this.direction = new THREE.Vector3();
         this.speed = 0.1;
         this.keys = {};
+
         window.addEventListener('keydown', (e) => this.keys[e.code] = true);
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
       },
+
       tick: function () {
-        const camera = document.getElementById('cameraEntity'); // Получаем камеру
-        camera.object3D.getWorldDirection(this.direction); // Вычисляем направление камеры
-        this.direction.y = 0; // Убираем вертикальное движение
-        this.direction.normalize(); // Нормализуем вектор
+        const camera = this.el.querySelector('[camera]');
+        camera.object3D.getWorldDirection(this.direction);
+        this.direction.y = 0;
+        this.direction.normalize();
 
         const currentPos = this.el.object3D.position;
 
         if (this.keys['KeyW']) currentPos.add(this.direction.multiplyScalar(this.speed));
         if (this.keys['KeyS']) currentPos.add(this.direction.multiplyScalar(-this.speed));
 
-        const right = new THREE.Vector3(0, 0, -1).cross(this.direction).normalize(); // Вычисляем правое направление
+        const right = new THREE.Vector3().crossVectors(this.direction, new THREE.Vector3(0, 1, 0));
         if (this.keys['KeyA']) currentPos.add(right.multiplyScalar(-this.speed));
         if (this.keys['KeyD']) currentPos.add(right.multiplyScalar(this.speed));
       }
@@ -79,6 +81,7 @@
         const z = Math.random() * 10 - 5;
         positions.push({x, y: 1, z});
       }
+
       document.getElementById('item1').setAttribute('position', positions[0]);
       document.getElementById('item2').setAttribute('position', positions[1]);
       document.getElementById('item3').setAttribute('position', positions[2]);
@@ -86,10 +89,11 @@
 
     // Проверка сбора объектов
     AFRAME.registerComponent('collectible', {
-      schema: {}, // Добавляем схему для компонента
       init: function () {
+        this.el.classList.add('collectible');
         this.collected = false;
       },
+
       tick: function () {
         const playerPos = document.getElementById('player').object3D.position;
         const itemPos = this.el.object3D.position;
@@ -98,14 +102,11 @@
         if (distance < 1 && !this.collected) {
           this.collected = true;
           this.el.setAttribute('visible', false);
-
+          
           // Эффекты
-          const explosionEffect = document.getElementById('explosionEffect');
-          explosionEffect.setAttribute('position', itemPos);
-          explosionEffect.setAttribute('visible', true);
-          setTimeout(() => explosionEffect.setAttribute('visible', false), 1000); // Скрываем через секунду
-
+          document.getElementById('explosion').setAttribute('position', itemPos);
           document.getElementById('collectSound').components.sound.playSound();
+
           score++;
           document.getElementById('score').setAttribute('value', `Score: ${score}`);
 
@@ -135,10 +136,12 @@
       time = 60;
       document.getElementById('score').setAttribute('value', 'Score: 0');
       document.getElementById('timer').setAttribute('value', 'Time: 60');
+
       document.querySelectorAll('.collectible').forEach(item => {
         item.setAttribute('visible', true);
         item.components.collectible.collected = false;
       });
+
       spawnObjects();
     }
 
@@ -147,3 +150,6 @@
   </script>
 </body>
 </html>
+
+Сделай так, чтобы персонаж двигался в сторону камеры, а также добавь частицы по примеру
+Пример: <a-entity id="explosion" particle-system="preset: explosion; color: yellow"></a-entity>
