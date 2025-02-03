@@ -17,121 +17,57 @@
     <a-sky color="#87CEEB"></a-sky>
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22" static-body></a-plane>
 
-    <!-- Камера с прицелом и управлением -->
-    <a-entity id="player" position="0 1.6 5" movement-controls="speed: 0.1" wasd-controls>
-      <a-entity camera look-controls>
-        <a-entity position="0 0 -1" geometry="primitive: circle; radius: 0.01" material="color: #FF0000;"></a-entity>
-        <a-entity cursor="fuse: true; fuseTimeout: 500" raycaster="objects: .collectible"></a-entity>
-      </a-entity>
+    <!-- Камера с исправленным движением -->
+    <a-entity id="player" position="0 1.6 5" player-movement>
+      <a-entity camera look-controls></a-entity>
     </a-entity>
-
-    <!-- Звук сбора -->
-    <a-sound id="collectSound" src="yoursound.wav" autoplay="false"></a-sound>
-
-    <!-- Частицы (взрыв при сборе) -->
-    <a-entity id="explosion" particle-system="preset: explosion; color: yellow" visible="false"></a-entity>
-
-    <!-- Движущиеся объекты -->
-    <a-entity id="movingObj" geometry="primitive: box" material="color: red"
-              position="0 2 -8" animation="property: position; to: 5 2 -8; dur: 2000; loop: true">
-    </a-entity>
-
-    <!-- Объекты для сбора -->
-    <a-entity id="item1" class="collectible" position="0 1 -3" geometry="primitive: sphere; radius: 0.5" material="color: yellow" dynamic-body></a-entity>
-    <a-entity id="item2" class="collectible" position="2 1 -5" geometry="primitive: sphere; radius: 0.5" material="color: yellow" dynamic-body></a-entity>
-    <a-entity id="item3" class="collectible" position="-2 1 -4" geometry="primitive: sphere; radius: 0.5" material="color: yellow" dynamic-body></a-entity>
-
-    <!-- Счет и таймер -->
-    <a-text id="score" value="Score: 0" position="-1 3 -5" color="#000"></a-text>
-    <a-text id="timer" value="Time: 60" position="1 3 -5" color="#000"></a-text>
 
   </a-scene>
 
   <script>
-    let score = 0;
-    let time = 60;
-    let totalCollectibles = 3;
+    AFRAME.registerComponent('player-movement', {
+      schema: { speed: { type: 'number', default: 0.1 } },
 
-    // Функция рандомизации позиций
-    function spawnObjects() {
-      document.querySelectorAll('.collectible').forEach((item) => {
-        let x = Math.random() * 10 - 5;
-        let z = Math.random() * 10 - 5;
-        item.setAttribute('position', `${x} 1 ${z}`);
-        item.setAttribute('visible', true);
-        item.collected = false;
-      });
-    }
+      init: function () {
+        this.direction = new THREE.Vector3();
+        this.rotation = new THREE.Euler();
+        this.velocity = new THREE.Vector3();
 
-    // Функция перезапуска игры
-    function restartGame() {
-      score = 0;
-      time = 60;
-      document.getElementById('score').setAttribute('value', 'Score: 0');
-      document.getElementById('timer').setAttribute('value', 'Time: 60');
-      spawnObjects();
-      document.getElementById('player').setAttribute('position', '0 1.6 5');
-    }
+        window.addEventListener('keydown', (event) => this.onKeyDown(event));
+        window.addEventListener('keyup', (event) => this.onKeyUp(event));
 
-    // Таймер
-    let timer = setInterval(() => {
-      if (time > 0) {
-        time--;
-        document.getElementById('timer').setAttribute('value', `Time: ${time}`);
-      } else {
-        clearInterval(timer);
-        restartGame();
-      }
-    }, 1000);
+        this.keys = { w: false, a: false, s: false, d: false };
+      },
 
-    // Компонент гравитации
-    AFRAME.registerComponent('gravity', {
+      onKeyDown: function (event) {
+        const key = event.key.toLowerCase();
+        if (this.keys.hasOwnProperty(key)) this.keys[key] = true;
+      },
+
+      onKeyUp: function (event) {
+        const key = event.key.toLowerCase();
+        if (this.keys.hasOwnProperty(key)) this.keys[key] = false;
+      },
+
       tick: function () {
-        if (this.el.body) {
-          this.el.body.applyForce(0, -9.8, 0);
-        }
+        const camera = this.el.children[0].object3D;
+        camera.getWorldDirection(this.direction);
+        this.direction.y = 0; // Игнорируем наклон вверх-вниз
+        this.direction.normalize();
+
+        this.velocity.set(0, 0, 0);
+
+        if (this.keys.w) this.velocity.add(this.direction.clone().multiplyScalar(this.data.speed));
+        if (this.keys.s) this.velocity.add(this.direction.clone().multiplyScalar(-this.data.speed));
+
+        const leftDirection = new THREE.Vector3(-this.direction.z, 0, this.direction.x);
+        if (this.keys.a) this.velocity.add(leftDirection.clone().multiplyScalar(this.data.speed));
+        if (this.keys.d) this.velocity.add(leftDirection.clone().multiplyScalar(-this.data.speed));
+
+        const position = this.el.object3D.position;
+        position.add(this.velocity);
       }
     });
-
-    // Компонент сбора объектов
-    AFRAME.registerComponent('collision-check', {
-      tick: function () {
-        const player = this.el;
-        const collectibles = document.querySelectorAll('.collectible');
-
-        collectibles.forEach((item) => {
-          const playerPos = player.object3D.position;
-          const itemPos = item.object3D.position;
-          const distance = playerPos.distanceTo(itemPos);
-
-          if (distance < 1 && !item.collected) {
-            item.setAttribute('visible', false);
-            item.collected = true;
-            score++;
-            document.getElementById('score').setAttribute('value', `Score: ${score}`);
-
-            // Воспроизводим звук
-            document.getElementById('collectSound').components.sound.playSound();
-
-            // Показываем взрыв
-            const explosion = document.getElementById('explosion');
-            explosion.setAttribute('position', `${itemPos.x} ${itemPos.y} ${itemPos.z}`);
-            explosion.setAttribute('visible', true);
-            setTimeout(() => explosion.setAttribute('visible', false), 500);
-
-            if (score === totalCollectibles) {
-              restartGame();
-            }
-          }
-        });
-      }
-    });
-
-    // Добавляем компонент проверки столкновений к игроку
-    document.getElementById('player').setAttribute('collision-check', '');
-
-    // Запускаем генерацию случайных позиций
-    spawnObjects();
   </script>
 </body>
 </html>
