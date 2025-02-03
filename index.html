@@ -20,7 +20,7 @@
 
     <!-- Камера с управлением -->
     <a-entity id="player" position="0 1.6 5" movement-controls>
-      <a-entity camera look-controls>
+      <a-entity camera look-controls id="cameraEntity">
         <a-entity cursor="fuse: true; fuseTimeout: 500" raycaster="objects: .collectible"></a-entity>
       </a-entity>
       <!-- VR контроллеры -->
@@ -55,16 +55,17 @@
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
       },
       tick: function () {
-        const camera = this.el.querySelector('[camera]');
-        camera.object3D.getWorldDirection(this.direction);
-        this.direction.y = 0;
-        this.direction.normalize();
+        const camera = document.getElementById('cameraEntity'); // Получаем камеру
+        camera.object3D.getWorldDirection(this.direction); // Вычисляем направление камеры
+        this.direction.y = 0; // Убираем вертикальное движение
+        this.direction.normalize(); // Нормализуем вектор
+
         const currentPos = this.el.object3D.position;
 
         if (this.keys['KeyW']) currentPos.add(this.direction.multiplyScalar(this.speed));
         if (this.keys['KeyS']) currentPos.add(this.direction.multiplyScalar(-this.speed));
 
-        const right = new THREE.Vector3().crossVectors(this.direction, new THREE.Vector3(0, 1, 0));
+        const right = new THREE.Vector3(0, 0, -1).cross(this.direction).normalize(); // Вычисляем правое направление
         if (this.keys['KeyA']) currentPos.add(right.multiplyScalar(-this.speed));
         if (this.keys['KeyD']) currentPos.add(right.multiplyScalar(this.speed));
       }
@@ -85,8 +86,8 @@
 
     // Проверка сбора объектов
     AFRAME.registerComponent('collectible', {
+      schema: {}, // Добавляем схему для компонента
       init: function () {
-        this.el.classList.add('collectible');
         this.collected = false;
       },
       tick: function () {
