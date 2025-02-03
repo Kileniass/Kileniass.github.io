@@ -13,7 +13,7 @@
     <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
 
     <!-- Эффект взрыва -->
-    <a-entity id="explosion" particle-system="preset: explosion; color: yellow" position="0 -10 0"></a-entity>
+    <a-entity id="explosionEffect" particle-system="preset: explosion; color: yellow; count: 50" visible="false"></a-entity>
 
     <!-- Звук при сборе -->
     <a-sound id="collectSound" src="yoursound.wav" autoplay="false"></a-sound>
@@ -51,17 +51,14 @@
         this.direction = new THREE.Vector3();
         this.speed = 0.1;
         this.keys = {};
-
         window.addEventListener('keydown', (e) => this.keys[e.code] = true);
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
       },
-
       tick: function () {
         const camera = this.el.querySelector('[camera]');
         camera.object3D.getWorldDirection(this.direction);
         this.direction.y = 0;
         this.direction.normalize();
-
         const currentPos = this.el.object3D.position;
 
         if (this.keys['KeyW']) currentPos.add(this.direction.multiplyScalar(this.speed));
@@ -81,7 +78,6 @@
         const z = Math.random() * 10 - 5;
         positions.push({x, y: 1, z});
       }
-
       document.getElementById('item1').setAttribute('position', positions[0]);
       document.getElementById('item2').setAttribute('position', positions[1]);
       document.getElementById('item3').setAttribute('position', positions[2]);
@@ -93,7 +89,6 @@
         this.el.classList.add('collectible');
         this.collected = false;
       },
-
       tick: function () {
         const playerPos = document.getElementById('player').object3D.position;
         const itemPos = this.el.object3D.position;
@@ -102,11 +97,14 @@
         if (distance < 1 && !this.collected) {
           this.collected = true;
           this.el.setAttribute('visible', false);
-          
-          // Эффекты
-          document.getElementById('explosion').setAttribute('position', itemPos);
-          document.getElementById('collectSound').components.sound.playSound();
 
+          // Эффекты
+          const explosionEffect = document.getElementById('explosionEffect');
+          explosionEffect.setAttribute('position', itemPos);
+          explosionEffect.setAttribute('visible', true);
+          setTimeout(() => explosionEffect.setAttribute('visible', false), 1000); // Скрываем через секунду
+
+          document.getElementById('collectSound').components.sound.playSound();
           score++;
           document.getElementById('score').setAttribute('value', `Score: ${score}`);
 
@@ -136,12 +134,10 @@
       time = 60;
       document.getElementById('score').setAttribute('value', 'Score: 0');
       document.getElementById('timer').setAttribute('value', 'Time: 60');
-
       document.querySelectorAll('.collectible').forEach(item => {
         item.setAttribute('visible', true);
         item.components.collectible.collected = false;
       });
-
       spawnObjects();
     }
 
